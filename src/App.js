@@ -25,7 +25,7 @@ function App() {
   const [result, setResult] = useState('');
   const [moonPhaseExplanation, setMoonPhaseExplanation] = useState('');
   const [location, setLocation] = useState({ latitude: 51.5074, longitude: -0.1278 }); // Default to London
-  const [city, setCity] = useState('London'); // Default city
+  const [city, setCity] = useState(''); // Start with an empty city
   const [moonPhase, setMoonPhase] = useState('');
 
   // Map card values to images
@@ -79,18 +79,18 @@ function App() {
           try {
             // Fetch city name using reverse geocoding API (e.g., OpenCage Geocoding API)
             const geoResponse = await axios.get(`https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_OPENCAGE_API_KEY`);
-            const cityName = geoResponse.data.results[0].components.city || geoResponse.data.results[0].components.town || geoResponse.data.results[0].components.village || 'Unknown Location';
+            const cityName = geoResponse.data.results[0].components.city || geoResponse.data.results[0].components.town || geoResponse.data.results[0].components.village || '';
             setCity(cityName);
           } catch (error) {
             console.error("Error fetching city name:", error);
-            setCity('Unknown Location');
+            setCity(''); // Keep city empty if there's an error
           }
         },
         (error) => {
           console.error("Error getting location:", error);
           // Default to London if location access is denied
           setLocation({ latitude: 51.5074, longitude: -0.1278 });
-          setCity('London');
+          setCity(''); // Keep city empty if location access is denied
         }
       );
     }
@@ -139,15 +139,18 @@ function App() {
       const computerCard = cardRange[Math.floor(Math.random() * cardRange.length)];
       setComputerCard(computerCard);
       setMoonPhaseExplanation(explanation);
+
+      // Determine the winner after both cards are drawn
+      determineWinner(playerCard, computerCard);
     } catch (error) {
       console.error("Error fetching moon phase:", error);
       const fallbackCard = drawRandomCard(); // Fallback to random card if API fails
       setComputerCard(fallbackCard);
       setMoonPhaseExplanation("The stars are clouded; randomness prevails.");
-    }
 
-    // Determine the winner after both cards are drawn
-    determineWinner(playerCard, computerCard);
+      // Determine the winner even if the API call fails
+      determineWinner(playerCard, fallbackCard);
+    }
   };
 
   return (
@@ -164,24 +167,26 @@ function App() {
       padding: '10px',
       position: 'relative' // Allows absolute positioning of elements
     }}>
-      {/* Display user's city and coordinates in the top left */}
+      {/* Display user's coordinates in the top left */}
       <div style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '14px' }}>
-        {city} ({location.latitude.toFixed(2)}, {location.longitude.toFixed(2)})
+        {location.latitude.toFixed(2)}, {location.longitude.toFixed(2)} {city && `(${city})`}
       </div>
 
-      {/* Display moon phase in the top right */}
-      <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '14px' }}>
-        Moon Phase: {moonPhase}
-      </div>
+      {/* Display moon phase in the top right if available */}
+      {moonPhase && (
+        <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '14px' }}>
+          Moon Phase: {moonPhase}
+        </div>
+      )}
 
       {/* Header Image */}
-      <img src={decal} alt="Header Decal" style={{ width: '80%', maxWidth: '400px', marginBottom: '10px' }} />
+      <img src={decal} alt="Header Decal" style={{ width: '80%', maxWidth: '400px', marginBottom: '5px', height: '50px', objectFit: 'cover' }} />
 
-      <h1 style={{ margin: '10px 0' }}>High Card Game</h1>
-      <button onClick={handleDrawCards} style={{ marginBottom: '10px' }}>Draw Your Card</button>
+      <h1 style={{ margin: '5px 0' }}>High Card Game</h1>
+      <button onClick={handleDrawCards} style={{ marginBottom: '5px' }}>Draw Your Card</button>
 
       {/* Container for card images and numbers */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '5px' }}>
         {/* Player's card */}
         {playerCard && (
           <div style={{ margin: '0 10px', textAlign: 'center' }}>
@@ -201,18 +206,21 @@ function App() {
         )}
       </div>
 
-      <div style={{
-        marginTop: '20px',
-        fontStyle: 'italic',
-        fontSize: '24px',
-        padding: '10px 20px',
-        animation: 'flash 1s infinite alternate'
-      }}>{result}</div>
+      {/* Only show result message if there is a result */}
+      {result && (
+        <div style={{
+          marginTop: '10px',
+          fontStyle: 'italic',
+          fontSize: '24px',
+          padding: '5px 10px',
+          animation: 'flash 1s infinite alternate'
+        }}>{result}</div>
+      )}
 
-      <div style={{ marginTop: '10px', fontStyle: 'italic' }}>{moonPhaseExplanation}</div>
+      <div style={{ marginTop: '5px', fontStyle: 'italic' }}>{moonPhaseExplanation}</div>
 
       {/* Footer Image */}
-      <img src={decal} alt="Footer Decal" style={{ width: '80%', maxWidth: '400px', marginTop: '10px' }} />
+      <img src={decal} alt="Footer Decal" style={{ width: '80%', maxWidth: '400px', marginTop: '5px', height: '50px', objectFit: 'cover' }} />
 
       {/* CSS for flashing effect */}
       <style>
