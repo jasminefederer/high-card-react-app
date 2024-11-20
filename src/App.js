@@ -1,11 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+
+// Importing card images
+import card2 from './images/2.png';
+import card3 from './images/3.png';
+import card4 from './images/4.png';
+import card5 from './images/5.png';
+import card6 from './images/6.png';
+import card7 from './images/7.png';
+import card8 from './images/8.png';
+import card9 from './images/9.png';
+import card10 from './images/10.png';
+import cardJ from './images/J.png';
+import cardQ from './images/Q.png';
+import cardK from './images/K.png';
+import cardA from './images/A.png';
+
+// Importing decal image for header and footer
+import decal from './images/decal.png';
 
 function App() {
   const [playerCard, setPlayerCard] = useState('');
   const [computerCard, setComputerCard] = useState('');
   const [result, setResult] = useState('');
   const [moonPhaseExplanation, setMoonPhaseExplanation] = useState('');
+  const [location, setLocation] = useState({ latitude: 51.5074, longitude: -0.1278 }); // Default to London
+  const [city, setCity] = useState('London'); // Default city
+  const [moonPhase, setMoonPhase] = useState('');
+
+  // Map card values to images
+  const cardImages = {
+    '2': card2,
+    '3': card3,
+    '4': card4,
+    '5': card5,
+    '6': card6,
+    '7': card7,
+    '8': card8,
+    '9': card9,
+    '10': card10,
+    'J': cardJ,
+    'Q': cardQ,
+    'K': cardK,
+    'A': cardA,
+  };
 
   // Function to draw a random card for the player
   const drawRandomCard = () => {
@@ -15,10 +53,12 @@ function App() {
 
   // Function to determine the winner
   const determineWinner = (playerCard, computerCard) => {
+    // Define card values for comparison
     const cardValues = {'2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14};
     const playerValue = cardValues[playerCard];
     const computerValue = cardValues[computerCard];
 
+    // Compare card values to determine the result
     if (playerValue > computerValue) {
       setResult("You win!");
     } else if (playerValue < computerValue) {
@@ -28,19 +68,48 @@ function App() {
     }
   };
 
+  // UseEffect hook to get user's location on component mount
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation({ latitude, longitude });
+
+          try {
+            // Fetch city name using reverse geocoding API (e.g., OpenCage Geocoding API)
+            const geoResponse = await axios.get(`https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=YOUR_OPENCAGE_API_KEY`);
+            const cityName = geoResponse.data.results[0].components.city || geoResponse.data.results[0].components.town || geoResponse.data.results[0].components.village || 'Unknown Location';
+            setCity(cityName);
+          } catch (error) {
+            console.error("Error fetching city name:", error);
+            setCity('Unknown Location');
+          }
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+          // Default to London if location access is denied
+          setLocation({ latitude: 51.5074, longitude: -0.1278 });
+          setCity('London');
+        }
+      );
+    }
+  }, []);
+
   // Function to handle drawing cards
   const handleDrawCards = async () => {
     const playerCard = drawRandomCard();
     setPlayerCard(playerCard);
 
     try {
-      // Update the API request to use London's coordinates and timezone
-      const response = await axios.get('https://api.open-meteo.com/v1/forecast?latitude=51.5074&longitude=-0.1278&daily=moon_phase&timezone=Europe/London');
-      const moonPhase = response.data.daily.moon_phase[0];
+      // Fetch moon phase data based on user's location
+      const response = await axios.get(`https://api.open-meteo.com/v1/forecast?latitude=${location.latitude}&longitude=${location.longitude}&daily=moon_phase&timezone=auto`);
+      const moonPhaseData = response.data.daily.moon_phase[0];
+      setMoonPhase(moonPhaseData); // Set moon phase for display
 
       let cardRange;
       let explanation;
-      switch (moonPhase) {
+      switch (moonPhaseData) {
         case "new":
           cardRange = ['2', '3', '4', '5'];
           explanation = "The New Moon whispers secrets of modest beginnings.";
@@ -77,21 +146,91 @@ function App() {
       setMoonPhaseExplanation("The stars are clouded; randomness prevails.");
     }
 
+    // Determine the winner after both cards are drawn
     determineWinner(playerCard, computerCard);
   };
 
   return (
-    <div style={{ textAlign: 'center', fontFamily: 'Arial, sans-serif' }}>
-      <h1>High Card Game</h1>
-      {/* <p>
-        In this game, the computer's card is influenced by the current moon phase over London.
-        The mystical powers of the moon guide its choices, adding an astronomical twist to your match!
-      </p> */}
-      <button onClick={handleDrawCards}>Draw Your Card</button>
-      <div>Your card: {playerCard}</div>
-      <div>Computer's card: {computerCard}</div>
-      <div>{result}</div>
-      <div style={{ marginTop: '20px', fontStyle: 'italic' }}>{moonPhaseExplanation}</div>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
+      backgroundColor: '#000',
+      color: '#fff',
+      textAlign: 'center',
+      fontFamily: 'Arial, sans-serif',
+      padding: '10px',
+      position: 'relative' // Allows absolute positioning of elements
+    }}>
+      {/* Display user's city and coordinates in the top left */}
+      <div style={{ position: 'absolute', top: '10px', left: '10px', fontSize: '14px' }}>
+        {city} ({location.latitude.toFixed(2)}, {location.longitude.toFixed(2)})
+      </div>
+
+      {/* Display moon phase in the top right */}
+      <div style={{ position: 'absolute', top: '10px', right: '10px', fontSize: '14px' }}>
+        Moon Phase: {moonPhase}
+      </div>
+
+      {/* Header Image */}
+      <img src={decal} alt="Header Decal" style={{ width: '80%', maxWidth: '400px', marginBottom: '10px' }} />
+
+      <h1 style={{ margin: '10px 0' }}>High Card Game</h1>
+      <button onClick={handleDrawCards} style={{ marginBottom: '10px' }}>Draw Your Card</button>
+
+      {/* Container for card images and numbers */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '10px' }}>
+        {/* Player's card */}
+        {playerCard && (
+          <div style={{ margin: '0 10px', textAlign: 'center' }}>
+            <h3>Your Card:</h3>
+            <img src={cardImages[playerCard]} alt={`Player's card ${playerCard}`} style={{ width: '120px', height: '180px' }} />
+            <p>{playerCard}</p>
+          </div>
+        )}
+
+        {/* Computer's card */}
+        {computerCard && (
+          <div style={{ margin: '0 10px', textAlign: 'center' }}>
+            <h3>Computer's Card:</h3>
+            <img src={cardImages[computerCard]} alt={`Computer's card ${computerCard}`} style={{ width: '120px', height: '180px' }} />
+            <p>{computerCard}</p>
+          </div>
+        )}
+      </div>
+
+      <div style={{
+        marginTop: '20px',
+        fontStyle: 'italic',
+        fontSize: '24px',
+        padding: '10px 20px',
+        animation: 'flash 1s infinite alternate'
+      }}>{result}</div>
+
+      <div style={{ marginTop: '10px', fontStyle: 'italic' }}>{moonPhaseExplanation}</div>
+
+      {/* Footer Image */}
+      <img src={decal} alt="Footer Decal" style={{ width: '80%', maxWidth: '400px', marginTop: '10px' }} />
+
+      {/* CSS for flashing effect */}
+      <style>
+        {`
+          @keyframes flash {
+            from {
+              color: #000;
+              background-color: #fff;
+              border: 2px solid #fff;
+            }
+            to {
+              color: #fff;
+              background-color: transparent;
+              border: 2px solid #fff;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }
